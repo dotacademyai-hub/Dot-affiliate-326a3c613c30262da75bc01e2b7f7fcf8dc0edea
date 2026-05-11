@@ -31,7 +31,7 @@ services:
         sync: false  # Will be the frontend static site URL
 
   # Frontend Static Site
-  - type: static
+  - type: web
     name: dot-affiliates-frontend
     runtime: static
     plan: free
