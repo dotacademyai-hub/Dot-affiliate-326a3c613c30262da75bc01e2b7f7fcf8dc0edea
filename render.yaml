@@ -1,0 +1,42 @@
+services:
+  # Backend API Service
+  - type: web
+    name: dot-affiliates-api
+    runtime: node
+    plan: free
+    buildCommand: pnpm install && pnpm --filter @workspace/api-server run build
+    startCommand: node artifacts/api-server/dist/index.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false  # Set manually in Render dashboard
+      - key: SESSION_SECRET
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_SECRET
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: ADMIN_NOTIFY_EMAIL
+        value: dotacademy.ai@gmail.com
+      - key: APP_URL
+        sync: false  # Will be the frontend static site URL
+
+  # Frontend Static Site
+  - type: static
+    name: dot-affiliates-frontend
+    runtime: static
+    plan: free
+    buildCommand: cd artifacts/dot-affiliates && pnpm install && pnpm run build
+    staticPublishPath: artifacts/dot-affiliates/dist/public
+    envVars:
+      - key: NODE_ENV
+        value: production
