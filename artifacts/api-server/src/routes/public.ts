@@ -221,6 +221,13 @@ router.get("/checkout/v1/payment-confirmed-3561B2", async (req, res): Promise<vo
           affiliateId: affiliate.id,
           affiliateName: affiliate.name,
         });
+
+        // Notify Admin of the new sale
+        await sendEmail({
+          to: process.env.ADMIN_NOTIFY_EMAIL || "dotacademy.ai@gmail.com",
+          subject: "💰 New Sale Recorded! - DOT Affiliates",
+          text: `Great news! A new sale has been recorded.\n\nAffiliate: ${affiliate.name} (${affiliate.email})\nPlatform: ${affiliate.primaryPlatform}\n\nView the leaderboard here: ${process.env.APP_URL}`,
+        });
         
         success = true;
       } else {

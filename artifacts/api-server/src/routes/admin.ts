@@ -232,15 +232,19 @@ router.delete("/admin/affiliates/:id", requireAdmin, async (req, res): Promise<v
 
   // Send Email Notification
   const isRejection = deleted.status === "pending";
-  await sendEmail({
-    to: deleted.email,
-    subject: isRejection 
-      ? "Update on your DOT FEARLESS WEEK 2.0 application" 
-      : "Account Closed - DOT FEARLESS WEEK 2.0",
-    text: isRejection
-      ? `Hi ${deleted.name},\n\nThank you for your interest in the DOT FEARLESS WEEK 2.0 affiliate program. After reviewing your application, we regret to inform you that it has not been approved at this time as it did not meet our selection criteria.\n\nWe appreciate your interest and wish you the best of luck.\n\n— The DOT Team`
-      : `Hi ${deleted.name},\n\nYour DOT FEARLESS WEEK 2.0 affiliate account has been closed. If you have any questions, please contact our support team.\n\n— The DOT Team`,
-  });
+  try {
+    await sendEmail({
+      to: deleted.email,
+      subject: isRejection 
+        ? "Update on your DOT FEARLESS WEEK 2.0 application" 
+        : "Account Closed - DOT FEARLESS WEEK 2.0",
+      text: isRejection
+        ? `Hi ${deleted.name},\n\nThank you for your interest in the DOT FEARLESS WEEK 2.0 affiliate program. After reviewing your application, we regret to inform you that it has not been approved at this time as it did not meet our selection criteria.\n\nWe appreciate your interest and wish you the best of luck.\n\n— The DOT Team`
+        : `Hi ${deleted.name},\n\nYour DOT FEARLESS WEEK 2.0 affiliate account has been closed. If you have any questions, please contact our support team.\n\n— The DOT Team`,
+    });
+  } catch (error) {
+    console.error("Failed to send deletion email:", error);
+  }
 
   await db.insert(activityTable).values({
     type: isRejection ? "application_rejected" : "account_deleted",
