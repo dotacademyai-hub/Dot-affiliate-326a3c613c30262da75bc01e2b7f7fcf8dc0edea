@@ -57,17 +57,37 @@ router.get("/track/:code", async (req, res): Promise<void> => {
     return;
   }
 
+  // Check for unique click (same IP and User Agent in last 24 hours)
+  const twentyFourHoursAgo = new Date();
+  twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+  const [existingClick] = await db
+    .select()
+    .from(clicksTable)
+    .where(
+      and(
+        eq(clicksTable.affiliateId, affiliate.id),
+        eq(clicksTable.ipAddress, req.ip ?? ""),
+        eq(clicksTable.userAgent, req.headers["user-agent"] ?? ""),
+        gt(clicksTable.createdAt, twentyFourHoursAgo),
+        eq(clicksTable.isPaid, false)
+      )
+    )
+    .limit(1);
+
+  if (!existingClick) {
+    await db
+      .update(affiliatesTable)
+      .set({ clicks: affiliate.clicks + 1 })
+      .where(eq(affiliatesTable.id, affiliate.id));
+  }
+
   await db.insert(clicksTable).values({
     affiliateId: affiliate.id,
     ipAddress: req.ip,
     userAgent: req.headers["user-agent"],
     isPaid: false,
   });
-
-  await db
-    .update(affiliatesTable)
-    .set({ clicks: affiliate.clicks + 1 })
-    .where(eq(affiliatesTable.id, affiliate.id));
 
   res.json({ success: true, message: "Click tracked" });
 });
@@ -96,15 +116,6 @@ router.get("/go/sellenda", async (req, res): Promise<void> => {
   // Generate a unique token for this tracking session
   const token = nanoid();
 
-  // Record the click with the token
-  await db.insert(clicksTable).values({
-    affiliateId: affiliate.id,
-    ipAddress: req.ip,
-    userAgent: req.headers["user-agent"],
-    token: token,
-    isPaid: false,
-  });
-
   // Check for unique click (same IP and User Agent in last 24 hours)
   const twentyFourHoursAgo = new Date();
   twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
@@ -130,6 +141,15 @@ router.get("/go/sellenda", async (req, res): Promise<void> => {
       .set({ clicks: affiliate.clicks + 1 })
       .where(eq(affiliatesTable.id, affiliate.id));
   }
+
+  // Record the click with the token
+  await db.insert(clicksTable).values({
+    affiliateId: affiliate.id,
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"],
+    token: token,
+    isPaid: false,
+  });
 
   // Set first-party cookie with the token
   // SameSite=Lax is crucial for survival across cross-site redirects
