@@ -49,6 +49,7 @@ export default function Dashboard() {
   const stats = dashData?.stats;
 
   const getAffiliateLink = () => {
+    if (stats?.affiliateLink) return stats.affiliateLink;
     if (!affiliate?.affiliateCode) return "";
     const baseUrl = window.location.origin;
     return `${baseUrl}/api/ref/${affiliate.affiliateCode}`;
