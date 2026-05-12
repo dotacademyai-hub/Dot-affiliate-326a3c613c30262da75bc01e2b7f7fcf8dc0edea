@@ -77,8 +77,8 @@ router.post("/auth/register", async (req, res): Promise<void> => {
       })()
     : null;
 
-  // Send Email Notifications
-  await Promise.all([
+  // Send Email Notifications (Non-blocking)
+  Promise.all([
     // Notify Affiliate
     sendEmail({
       to: affiliate.email,
@@ -90,7 +90,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
       `New Application: ${affiliate.name}`,
       `A new affiliate application has been submitted.\n\nName: ${affiliate.name}\nEmail: ${affiliate.email}\nPlatform: ${affiliate.primaryPlatform}\n\nReview it here: ${process.env.APP_URL}/fearless-control-gate-2025`
     ),
-  ]);
+  ]).catch(err => console.error("Signup email notification error:", err));
 
   await Promise.all([
     db.insert(activityTable).values({

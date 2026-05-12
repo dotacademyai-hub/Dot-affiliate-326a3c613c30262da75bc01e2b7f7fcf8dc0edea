@@ -3,6 +3,7 @@ import { eq, desc, and, gt } from "drizzle-orm";
 import { db, affiliatesTable, clicksTable, activityTable } from "@workspace/db";
 import { TrackAffiliateClickParams } from "@workspace/api-zod";
 import { nanoid } from "nanoid";
+import { sendEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -54,6 +55,15 @@ router.get("/track/:code", async (req, res): Promise<void> => {
 
   if (affiliate.status !== "active") {
     res.status(404).json({ error: "Invalid affiliate code" });
+    return;
+  }
+
+  // Detect bots and crawlers to avoid ghost clicks
+  const ua = req.headers["user-agent"] || "";
+  const isBot = /bot|crawler|spider|slurp|facebookexternalhit|whatsapp|google|bing|yahoo|duckduckgo|linkedin|twitter|gmail|outlook/i.test(ua) && !/chrome|safari|firefox|edge|opera/i.test(ua);
+  
+  if (isBot) {
+    res.json({ success: true, message: "Bot detected, click not counted" });
     return;
   }
 
@@ -110,6 +120,15 @@ router.get("/go/sellenda", async (req, res): Promise<void> => {
 
   if (!affiliate) {
     res.status(404).send("Invalid or inactive affiliate");
+    return;
+  }
+
+  // Detect bots and crawlers to avoid ghost clicks during redirection
+  const ua = req.headers["user-agent"] || "";
+  const isBot = /bot|crawler|spider|slurp|facebookexternalhit|whatsapp|google|bing|yahoo|duckduckgo|linkedin|twitter|gmail|outlook/i.test(ua) && !/chrome|safari|firefox|edge|opera/i.test(ua);
+  
+  if (isBot) {
+    res.redirect(SELLENDA_URL);
     return;
   }
 
@@ -222,12 +241,12 @@ router.get("/checkout/v1/payment-confirmed-3561B2", async (req, res): Promise<vo
           affiliateName: affiliate.name,
         });
 
-        // Notify Admin of the new sale
-        await sendEmail({
+        // Notify Admin of the new sale (Non-blocking)
+        sendEmail({
           to: process.env.ADMIN_NOTIFY_EMAIL || "dotacademy.ai@gmail.com",
           subject: "💰 New Sale Recorded! - DOT Affiliates",
           text: `Great news! A new sale has been recorded.\n\nAffiliate: ${affiliate.name} (${affiliate.email})\nPlatform: ${affiliate.primaryPlatform}\n\nView the leaderboard here: ${process.env.APP_URL}`,
-        });
+        }).catch((err: any) => console.error("Sale notification email error:", err));
         
         success = true;
       } else {

@@ -4,12 +4,16 @@ import { logger } from "./logger";
 const OFFICIAL_EMAIL = "dotacademy.ai@gmail.com";
 
 // SMTP Configuration
-// For Gmail, you'll need an "App Password" if 2FA is enabled.
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // Use STARTTLS
   auth: {
     user: OFFICIAL_EMAIL,
     pass: (process.env.EMAIL_PASSWORD || "").replace(/\s/g, ""), // Use an App Password for Gmail
+  },
+  tls: {
+    rejectUnauthorized: false, // Helps with some cloud hosting certificate issues
   },
 });
 

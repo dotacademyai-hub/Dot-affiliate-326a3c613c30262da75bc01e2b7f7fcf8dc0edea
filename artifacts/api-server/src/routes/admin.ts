@@ -27,13 +27,13 @@ function safeAffiliate(a: typeof affiliatesTable.$inferSelect) {
 function buildApprovalWhatsApp(name: string, code: string, whatsapp: string): string {
   const apiDomain = process.env.PUBLIC_DOMAIN ?? "localhost:8080";
   const link = `https://${apiDomain}/api/ref/${code}`;
-  const msg = `🎉 *Congratulations ${name}!*\n\nYour DOT FEARLESS WEEK 2.0 affiliate application has been *approved*!\n\n🔗 *Your unique tracking link:*\n${link}\n\n📊 Log in to your dashboard to track your clicks and conversions:\n${APP_URL}/auth\n\nShare your link everywhere — only confirmed purchases count toward your rank and rewards. Let's go! 🚀\n\n— The DOT Team`;
+  const msg = `Hello ${name}, your affiliate application for DOT FEARLESS WEEK 2.0 has been approved. Your unique tracking link is: ${link}. You can log in to your dashboard to track your performance at: ${APP_URL}/auth. We look forward to a successful partnership. - The DOT Team`;
   const number = whatsapp.replace(/[^0-9]/g, "");
   return `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
 }
 
 function buildSuspensionWhatsApp(name: string, whatsapp: string): string {
-  const msg = `⚠️ *Hi ${name},*\n\nWe're reaching out regarding your DOT FEARLESS WEEK 2.0 affiliate account. Your account has been temporarily *suspended*.\n\nIf you believe this is a mistake or would like more information, please reply to this message and our team will assist you.\n\n— The DOT Team`;
+  const msg = `Hello ${name}, this is to inform you that your DOT FEARLESS WEEK 2.0 affiliate account has been temporarily suspended. If you have any questions or require further information, please reply to this message. - The DOT Team`;
   const number = whatsapp.replace(/[^0-9]/g, "");
   return `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
 }
@@ -41,7 +41,7 @@ function buildSuspensionWhatsApp(name: string, whatsapp: string): string {
 function buildReactivationWhatsApp(name: string, code: string, whatsapp: string): string {
   const apiDomain = process.env.PUBLIC_DOMAIN ?? "localhost:8080";
   const link = `https://${apiDomain}/api/ref/${code}`;
-  const msg = `✅ *Hi ${name}!*\n\nGreat news — your DOT FEARLESS WEEK 2.0 affiliate account has been *reactivated*!\n\n🔗 *Your tracking link:*\n${link}\n\nLog back in and keep driving referrals: ${APP_URL}/auth\n\n— The DOT Team`;
+  const msg = `Hello ${name}, your DOT FEARLESS WEEK 2.0 affiliate account has been successfully reactivated. Your tracking link remains: ${link}. You can resume tracking your referrals at: ${APP_URL}/auth. - The DOT Team`;
   const number = whatsapp.replace(/[^0-9]/g, "");
   return `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
 }
@@ -230,21 +230,17 @@ router.delete("/admin/affiliates/:id", requireAdmin, async (req, res): Promise<v
   const [deleted] = await db.delete(affiliatesTable).where(eq(affiliatesTable.id, params.data.id)).returning();
   if (!deleted) { res.status(404).json({ error: "Affiliate not found" }); return; }
 
-  // Send Email Notification
+  // Send Email Notification (Non-blocking)
   const isRejection = deleted.status === "pending";
-  try {
-    await sendEmail({
-      to: deleted.email,
-      subject: isRejection 
-        ? "Update on your DOT FEARLESS WEEK 2.0 application" 
-        : "Account Closed - DOT FEARLESS WEEK 2.0",
-      text: isRejection
-        ? `Hi ${deleted.name},\n\nThank you for your interest in the DOT FEARLESS WEEK 2.0 affiliate program. After reviewing your application, we regret to inform you that it has not been approved at this time as it did not meet our selection criteria.\n\nWe appreciate your interest and wish you the best of luck.\n\n— The DOT Team`
-        : `Hi ${deleted.name},\n\nYour DOT FEARLESS WEEK 2.0 affiliate account has been closed. If you have any questions, please contact our support team.\n\n— The DOT Team`,
-    });
-  } catch (error) {
-    console.error("Failed to send deletion email:", error);
-  }
+  sendEmail({
+    to: deleted.email,
+    subject: isRejection 
+      ? "Update on your DOT FEARLESS WEEK 2.0 application" 
+      : "Account Closed - DOT FEARLESS WEEK 2.0",
+    text: isRejection
+      ? `Hi ${deleted.name},\n\nThank you for your interest in the DOT FEARLESS WEEK 2.0 affiliate program. After reviewing your application, we regret to inform you that it has not been approved at this time as it did not meet our selection criteria.\n\nWe appreciate your interest and wish you the best of luck.\n\n— The DOT Team`
+      : `Hi ${deleted.name},\n\nYour DOT FEARLESS WEEK 2.0 affiliate account has been closed. If you have any questions, please contact our support team.\n\n— The DOT Team`,
+  }).catch(error => console.error("Failed to send deletion email:", error));
 
   await db.insert(activityTable).values({
     type: isRejection ? "application_rejected" : "account_deleted",
@@ -295,7 +291,7 @@ router.post("/admin/affiliates/:id/suspend", requireAdmin, async (req, res): Pro
     }),
   ]);
 
-  res.json({ success: true, message: "Affiliate suspended" });
+  res.json({ success: true, message: "Affiliate suspended", whatsappMessage: waLink });
 });
 
 /* ─── Unsuspend ──────────────────────────────────────────────── */
@@ -338,7 +334,7 @@ router.post("/admin/affiliates/:id/unsuspend", requireAdmin, async (req, res): P
     }),
   ]);
 
-  res.json({ success: true, message: "Affiliate unsuspended" });
+  res.json({ success: true, message: "Affiliate unsuspended", whatsappMessage: waLink });
 });
 
 /* ─── Approve ────────────────────────────────────────────────── */
@@ -354,7 +350,8 @@ router.post("/admin/affiliates/:id/approve", requireAdmin, async (req, res): Pro
   const waLink = updated.whatsappNumber ? buildApprovalWhatsApp(updated.name, updated.affiliateCode, updated.whatsappNumber) : null;
 
   // Send Email Notification
-  const trackingLink = `${APP_URL}/api/go/sellenda?aff=${updated.affiliateCode}`;
+  const apiDomain = process.env.PUBLIC_DOMAIN ?? "localhost:8080";
+  const trackingLink = `https://${apiDomain}/api/ref/${updated.affiliateCode}`;
   await sendEmail({
     to: updated.email,
     subject: "Application Approved - DOT FEARLESS WEEK 2.0",
@@ -381,7 +378,7 @@ router.post("/admin/affiliates/:id/approve", requireAdmin, async (req, res): Pro
     }),
   ]);
 
-  res.json({ success: true, message: "Affiliate approved" });
+  res.json({ success: true, message: "Affiliate approved", whatsappMessage: waLink });
 });
 
 /* ─── Top Performers ─────────────────────────────────────────── */

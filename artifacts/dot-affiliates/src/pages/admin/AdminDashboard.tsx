@@ -23,6 +23,7 @@ import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -361,6 +362,7 @@ function RankBadge({ rank }: { rank: number }) {
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [section, setSection] = useState<Section>("dashboard");
   const [search, setSearch] = useState("");
@@ -381,7 +383,7 @@ export default function AdminDashboard() {
   }, { query: { queryKey: getAdminListAffiliatesQueryKey({ status: statusFilter !== "all" ? statusFilter as "active" | "pending" | "suspended" : undefined, search: search || undefined, page, limit: LIMIT }) } });
   const { data: activity, isLoading: activityLoading } = useAdminGetActivity();
   const { data: topPerformers, isLoading: topLoading } = useAdminGetTopPerformers();
-  const { data: notifData } = useAdminGetNotifications({ query: { queryKey: getAdminGetNotificationsQueryKey(), refetchInterval: 15000 } });
+  const { data: notifData } = useAdminGetNotifications({ query: { queryKey: getAdminGetNotificationsQueryKey(), refetchInterval: 5000 } });
 
   const suspendMutation = useAdminSuspendAffiliate();
   const unsuspendMutation = useAdminUnsuspendAffiliate();
@@ -401,32 +403,66 @@ export default function AdminDashboard() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [notifOpen]);
 
-  const invalidateAll = () => {
-    queryClient.invalidateQueries({ queryKey: getAdminGetStatsQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getAdminListAffiliatesQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getAdminGetActivityQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getAdminGetTopPerformersQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getAdminGetNotificationsQueryKey() });
+  const invalidateAll = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: getAdminGetStatsQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getAdminListAffiliatesQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getAdminGetActivityQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getAdminGetTopPerformersQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getAdminGetNotificationsQueryKey() }),
+    ]);
   };
 
   const handleApprove = async (id: number) => {
-    await approveMutation.mutateAsync({ id });
-    invalidateAll();
+    try {
+      const result = await approveMutation.mutateAsync({ id }) as any;
+      toast({ title: "Affiliate Approved", description: "The affiliate has been activated and notified." });
+      await invalidateAll();
+      
+      if (result?.whatsappMessage) {
+        window.open(result.whatsappMessage, "_blank");
+      }
+    } catch (err) {
+      toast({ title: "Action Failed", description: "Could not approve affiliate.", variant: "destructive" });
+    }
   };
 
   const handleSuspend = async (id: number) => {
-    await suspendMutation.mutateAsync({ id });
-    invalidateAll();
+    try {
+      const result = await suspendMutation.mutateAsync({ id }) as any;
+      toast({ title: "Affiliate Suspended", description: "The affiliate account is now suspended." });
+      await invalidateAll();
+
+      if (result?.whatsappMessage) {
+        window.open(result.whatsappMessage, "_blank");
+      }
+    } catch (err) {
+      toast({ title: "Action Failed", description: "Could not suspend affiliate.", variant: "destructive" });
+    }
   };
 
   const handleUnsuspend = async (id: number) => {
-    await unsuspendMutation.mutateAsync({ id });
-    invalidateAll();
+    try {
+      const result = await unsuspendMutation.mutateAsync({ id }) as any;
+      toast({ title: "Affiliate Restored", description: "The affiliate account has been reactivated." });
+      await invalidateAll();
+
+      if (result?.whatsappMessage) {
+        window.open(result.whatsappMessage, "_blank");
+      }
+    } catch (err) {
+      toast({ title: "Action Failed", description: "Could not restore affiliate.", variant: "destructive" });
+    }
   };
 
   const handleDelete = async (id: number) => {
-    await deleteMutation.mutateAsync({ id });
-    invalidateAll();
+    try {
+      await deleteMutation.mutateAsync({ id });
+      toast({ title: "Affiliate Deleted", description: "The affiliate has been permanently removed." });
+      await invalidateAll();
+    } catch (err) {
+      toast({ title: "Action Failed", description: "Could not delete affiliate.", variant: "destructive" });
+    }
   };
 
   const logout = () => {
@@ -716,9 +752,27 @@ export default function AdminDashboard() {
                               </AffiliateDetailDialog>
                               
                               {a.status === "pending" && (
-                                <Button size="sm" variant="ghost" onClick={() => handleApprove(a.id)} className="h-7 px-2 text-green-500 hover:bg-green-500/10 text-xs" data-testid={`button-approve-${a.id}`}>
-                                  <CheckCircle className="w-3.5 h-3.5 mr-1" /> Approve
-                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="h-7 px-2 text-green-500 hover:bg-green-500/10 text-xs" data-testid={`button-approve-${a.id}`}>
+                                      <CheckCircle className="w-3.5 h-3.5 mr-1" /> Approve
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="w-[95vw] sm:max-w-md">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Approve Affiliate</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to approve <strong>{a.name}</strong>? They will be notified via email and receive their tracking link.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleApprove(a.id)} className="bg-green-600 hover:bg-green-700 text-white">
+                                        Confirm Approval
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               )}
                               {a.status === "pending" && (
                                 <AlertDialog>
@@ -747,14 +801,50 @@ export default function AdminDashboard() {
                                 </AlertDialog>
                               )}
                               {a.status === "active" && (
-                                <Button size="sm" variant="ghost" onClick={() => handleSuspend(a.id)} className="h-7 px-2 text-amber-500 hover:bg-amber-500/10 text-xs" data-testid={`button-suspend-${a.id}`}>
-                                  <Ban className="w-3.5 h-3.5 mr-1" /> Suspend
-                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="h-7 px-2 text-amber-500 hover:bg-amber-500/10 text-xs" data-testid={`button-suspend-${a.id}`}>
+                                      <Ban className="w-3.5 h-3.5 mr-1" /> Suspend
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="w-[95vw] sm:max-w-md">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Suspend Account</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to suspend <strong>{a.name}</strong>? Their tracking links will stop working until reactivated.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleSuspend(a.id)} className="bg-amber-600 hover:bg-amber-700 text-white">
+                                        Suspend Account
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               )}
                               {a.status === "suspended" && (
-                                <Button size="sm" variant="ghost" onClick={() => handleUnsuspend(a.id)} className="h-7 px-2 text-green-500 hover:bg-green-500/10 text-xs" data-testid={`button-unsuspend-${a.id}`}>
-                                  <CheckCircle className="w-3.5 h-3.5 mr-1" /> Restore
-                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="h-7 px-2 text-green-500 hover:bg-green-500/10 text-xs" data-testid={`button-unsuspend-${a.id}`}>
+                                      <CheckCircle className="w-3.5 h-3.5 mr-1" /> Restore
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="w-[95vw] sm:max-w-md">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Restore Account</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to reactivate <strong>{a.name}</strong>'s account?
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleUnsuspend(a.id)} className="bg-green-600 hover:bg-green-700 text-white">
+                                        Restore Account
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               )}
                               {a.whatsappNumber && (
                                 <a 
