@@ -381,9 +381,9 @@ export default function AdminDashboard() {
     page,
     limit: LIMIT,
   }, { query: { queryKey: getAdminListAffiliatesQueryKey({ status: statusFilter !== "all" ? statusFilter as "active" | "pending" | "suspended" : undefined, search: search || undefined, page, limit: LIMIT }) } });
-  const { data: activity, isLoading: activityLoading } = useAdminGetActivity();
-  const { data: topPerformers, isLoading: topLoading } = useAdminGetTopPerformers();
-  const { data: notifData } = useAdminGetNotifications({ query: { queryKey: getAdminGetNotificationsQueryKey(), refetchInterval: 5000 } });
+  const { data: activity, isLoading: activityLoading, refetch: refetchActivity } = useAdminGetActivity();
+  const { data: topPerformers, isLoading: topLoading, refetch: refetchTop } = useAdminGetTopPerformers();
+  const { data: notifData, refetch: refetchNotifs } = useAdminGetNotifications({ query: { queryKey: getAdminGetNotificationsQueryKey(), refetchInterval: 5000 } });
 
   const suspendMutation = useAdminSuspendAffiliate();
   const unsuspendMutation = useAdminUnsuspendAffiliate();

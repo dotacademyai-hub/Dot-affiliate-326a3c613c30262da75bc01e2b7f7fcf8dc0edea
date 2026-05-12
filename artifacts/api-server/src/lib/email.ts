@@ -6,15 +6,14 @@ const OFFICIAL_EMAIL = "dotacademy.ai@gmail.com";
 // SMTP Configuration
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // Use STARTTLS
+  port: 465,
+  secure: true, // Use SSL/TLS
   auth: {
     user: OFFICIAL_EMAIL,
     pass: (process.env.EMAIL_PASSWORD || "").replace(/\s/g, ""), // Use an App Password for Gmail
   },
-  tls: {
-    rejectUnauthorized: false, // Helps with some cloud hosting certificate issues
-  },
+  debug: true, // Enable debug output
+  logger: true, // Log to console
 });
 
 interface EmailOptions {

@@ -264,12 +264,12 @@ router.post("/admin/affiliates/:id/suspend", requireAdmin, async (req, res): Pro
 
   const waLink = updated.whatsappNumber ? buildSuspensionWhatsApp(updated.name, updated.whatsappNumber) : null;
   
-  // Send Email Notification
-  await sendEmail({
+  // Send Email Notification (Non-blocking)
+  sendEmail({
     to: updated.email,
     subject: "Account Suspended - DOT FEARLESS WEEK 2.0",
     text: `Hi ${updated.name},\n\nWe're reaching out regarding your DOT FEARLESS WEEK 2.0 affiliate account. Your account has been temporarily suspended.\n\nIf you believe this is a mistake or would like more information, please contact our support team.\n\n— The DOT Team`,
-  });
+  }).catch(error => console.error("Failed to send suspension email:", error));
 
   await Promise.all([
     db.insert(activityTable).values({
@@ -306,13 +306,13 @@ router.post("/admin/affiliates/:id/unsuspend", requireAdmin, async (req, res): P
 
   const waLink = updated.whatsappNumber ? buildReactivationWhatsApp(updated.name, updated.affiliateCode, updated.whatsappNumber) : null;
 
-  // Send Email Notification
+  // Send Email Notification (Non-blocking)
   const link = `${APP_URL}/auth`;
-  await sendEmail({
+  sendEmail({
     to: updated.email,
     subject: "Account Reactivated - DOT FEARLESS WEEK 2.0",
     text: `Hi ${updated.name}!\n\nGreat news — your DOT FEARLESS WEEK 2.0 affiliate account has been reactivated!\n\nLog back in and keep driving referrals: ${link}\n\n— The DOT Team`,
-  });
+  }).catch(error => console.error("Failed to send reactivation email:", error));
 
   await Promise.all([
     db.insert(activityTable).values({
@@ -349,14 +349,14 @@ router.post("/admin/affiliates/:id/approve", requireAdmin, async (req, res): Pro
 
   const waLink = updated.whatsappNumber ? buildApprovalWhatsApp(updated.name, updated.affiliateCode, updated.whatsappNumber) : null;
 
-  // Send Email Notification
+  // Send Email Notification (Non-blocking)
   const apiDomain = process.env.PUBLIC_DOMAIN ?? "localhost:8080";
   const trackingLink = `https://${apiDomain}/api/ref/${updated.affiliateCode}`;
-  await sendEmail({
+  sendEmail({
     to: updated.email,
     subject: "Application Approved - DOT FEARLESS WEEK 2.0",
     text: `Congratulations ${updated.name}!\n\nYour DOT FEARLESS WEEK 2.0 affiliate application has been approved!\n\n🔗 Your unique tracking link:\n${trackingLink}\n\n📊 Log in to your dashboard to track your performance:\n${APP_URL}/auth\n\n— The DOT Team`,
-  });
+  }).catch(error => console.error("Failed to send approval email:", error));
 
   await Promise.all([
     db.insert(activityTable).values({
