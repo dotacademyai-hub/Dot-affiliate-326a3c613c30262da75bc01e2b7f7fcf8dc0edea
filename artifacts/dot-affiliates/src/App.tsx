@@ -1,5 +1,6 @@
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { setBaseUrl } from "@workspace/api-client-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -10,6 +11,10 @@ import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import MockPlatform from "@/pages/MockPlatform";
+
+// Initialize API client with backend URL from environment
+const apiUrl = import.meta.env.VITE_API_URL || "";
+setBaseUrl(apiUrl);
 
 const queryClient = new QueryClient();
 
