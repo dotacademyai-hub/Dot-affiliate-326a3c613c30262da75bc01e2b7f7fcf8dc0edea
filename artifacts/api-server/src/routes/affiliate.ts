@@ -18,7 +18,7 @@ function safeAffiliate(a: typeof affiliatesTable.$inferSelect) {
 
 function getAffiliateLink(code: string): string {
   const domain = process.env.PUBLIC_DOMAIN ?? "localhost:80";
-  return `https://${domain}/api/track/${code}`;
+  return `https://${domain}/api/ref/${code}`;
 }
 
 router.get("/affiliate/me", requireAffiliate, async (req, res): Promise<void> => {

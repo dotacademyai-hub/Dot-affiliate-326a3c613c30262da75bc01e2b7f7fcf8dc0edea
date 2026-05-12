@@ -25,7 +25,8 @@ function safeAffiliate(a: typeof affiliatesTable.$inferSelect) {
 }
 
 function buildApprovalWhatsApp(name: string, code: string, whatsapp: string): string {
-  const link = `${APP_URL}?ref=${code}`;
+  const apiDomain = process.env.PUBLIC_DOMAIN ?? "localhost:8080";
+  const link = `https://${apiDomain}/api/ref/${code}`;
   const msg = `🎉 *Congratulations ${name}!*\n\nYour DOT FEARLESS WEEK 2.0 affiliate application has been *approved*!\n\n🔗 *Your unique tracking link:*\n${link}\n\n📊 Log in to your dashboard to track your clicks and conversions:\n${APP_URL}/auth\n\nShare your link everywhere — only confirmed purchases count toward your rank and rewards. Let's go! 🚀\n\n— The DOT Team`;
   const number = whatsapp.replace(/[^0-9]/g, "");
   return `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
@@ -38,7 +39,8 @@ function buildSuspensionWhatsApp(name: string, whatsapp: string): string {
 }
 
 function buildReactivationWhatsApp(name: string, code: string, whatsapp: string): string {
-  const link = `${APP_URL}?ref=${code}`;
+  const apiDomain = process.env.PUBLIC_DOMAIN ?? "localhost:8080";
+  const link = `https://${apiDomain}/api/ref/${code}`;
   const msg = `✅ *Hi ${name}!*\n\nGreat news — your DOT FEARLESS WEEK 2.0 affiliate account has been *reactivated*!\n\n🔗 *Your tracking link:*\n${link}\n\nLog back in and keep driving referrals: ${APP_URL}/auth\n\n— The DOT Team`;
   const number = whatsapp.replace(/[^0-9]/g, "");
   return `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
