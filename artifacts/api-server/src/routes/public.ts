@@ -7,7 +7,7 @@ import { sendEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
-const SELLENDA_URL = "https://sellenda.com.ng/buy/3561B2";
+const SELLENDA_URL = "https://sellenda.com.ng/buy/3561B2?redirect_success=https%3A%2F%2Fdot-affiliates-api.up.railway.app%2Fapi%2Fcheckout%2Fv1%2Fpayment-confirmed-3561B2";
 
 router.get("/public/leaderboard", async (_req, res): Promise<void> => {
   const affiliates = await db
