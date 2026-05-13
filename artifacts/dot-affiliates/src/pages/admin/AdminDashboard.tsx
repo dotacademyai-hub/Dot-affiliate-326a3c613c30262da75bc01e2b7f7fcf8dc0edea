@@ -359,6 +359,26 @@ function RankBadge({ rank }: { rank: number }) {
   return <span className="text-muted-foreground font-bold text-sm ml-2">{String(rank).padStart(2, "0")}</span>;
 }
 
+function formatWhatsAppNumber(phone: string): string {
+  // 1. Remove all non-numeric characters (handles dashes, spaces, +, etc.)
+  let cleaned = phone.replace(/\D/g, "");
+
+  // 2. Handle cases where country code is followed by a leading zero (e.g., 234080...)
+  if (cleaned.startsWith("2340")) {
+    cleaned = "234" + cleaned.substring(4);
+  }
+  // 3. Handle standard Nigerian leading zero (e.g., 080...)
+  else if (cleaned.startsWith("0")) {
+    cleaned = "234" + cleaned.substring(1);
+  }
+  // 4. Handle 10-digit numbers without country code or leading zero (e.g., 803...)
+  else if (cleaned.length === 10 && !cleaned.startsWith("234")) {
+    cleaned = "234" + cleaned;
+  }
+
+  return cleaned;
+}
+
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const { theme, setTheme } = useTheme();
@@ -848,7 +868,7 @@ export default function AdminDashboard() {
                               )}
                               {a.whatsappNumber && (
                                 <a 
-                                  href={`https://wa.me/${a.whatsappNumber.replace(/[^0-9]/g, "")}`} 
+                                  href={`https://wa.me/${formatWhatsAppNumber(a.whatsappNumber)}`} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   aria-label={`Contact ${a.name} on WhatsApp`}
@@ -1009,7 +1029,7 @@ export default function AdminDashboard() {
                   </div>
                   {a.whatsappNumber && (
                     <a 
-                      href={`https://wa.me/${a.whatsappNumber.replace(/[^0-9]/g, "")}`} 
+                      href={`https://wa.me/${formatWhatsAppNumber(a.whatsappNumber)}`} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       aria-label={`Contact ${a.name} on WhatsApp`}

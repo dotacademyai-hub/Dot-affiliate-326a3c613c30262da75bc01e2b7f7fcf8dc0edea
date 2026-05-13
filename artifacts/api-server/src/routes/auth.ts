@@ -13,6 +13,7 @@ import {
 } from "../middlewares/auth";
 import { generateAffiliateCode } from "../lib/affiliateCode";
 import { sendEmail, notifyAdmins } from "../lib/email";
+import { formatWhatsAppNumber } from "../lib/whatsapp";
 
 const router: IRouter = Router();
 
@@ -63,6 +64,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     .insert(affiliatesTable)
     .values({
       ...rest,
+      whatsappNumber: formatWhatsAppNumber(rest.whatsappNumber),
       passwordHash,
       affiliateCode,
       status: "pending",
@@ -71,7 +73,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
 
   const waReviewLink = affiliate.whatsappNumber
     ? (() => {
-        const number = affiliate.whatsappNumber.replace(/[^0-9]/g, "");
+        const number = formatWhatsAppNumber(affiliate.whatsappNumber);
         const msg = `👋 Hi ${affiliate.name}, we've received your FEARLESS WEEK 2.0 affiliate application! Our team will review it shortly and get back to you. Stay tuned! — The DOT Team`;
         return `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
       })()

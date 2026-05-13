@@ -2,11 +2,9 @@ import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { eq, desc, sql } from "drizzle-orm";
 import { db, affiliatesTable, clicksTable } from "@workspace/db";
-import {
-  UpdateAffiliateSettingsBody,
-  ChangePasswordBody,
-} from "@workspace/api-zod";
+import { UpdateAffiliateSettingsBody, ChangePasswordBody } from "@workspace/api-zod";
 import { requireAffiliate } from "../middlewares/auth";
+import { formatWhatsAppNumber } from "../lib/whatsapp";
 
 const router: IRouter = Router();
 
@@ -66,7 +64,9 @@ router.put("/affiliate/settings", requireAffiliate, async (req, res): Promise<vo
   const updateData: Record<string, unknown> = {};
   if (parsed.data.name != null) updateData.name = parsed.data.name;
   if (parsed.data.username != null) updateData.username = parsed.data.username;
-  if (parsed.data.whatsappNumber != null) updateData.whatsappNumber = parsed.data.whatsappNumber;
+  if (parsed.data.whatsappNumber != null) {
+    updateData.whatsappNumber = formatWhatsAppNumber(parsed.data.whatsappNumber);
+  }
   if (parsed.data.phoneNumber !== undefined) updateData.phoneNumber = parsed.data.phoneNumber;
   if (parsed.data.primaryPlatform != null) updateData.primaryPlatform = parsed.data.primaryPlatform;
 

@@ -11,6 +11,7 @@ import {
 } from "@workspace/api-zod";
 import { requireAdmin, signAdminToken } from "../middlewares/auth";
 import { sendEmail } from "../lib/email";
+import { formatWhatsAppNumber } from "../lib/whatsapp";
 
 const router: IRouter = Router();
 
@@ -28,13 +29,13 @@ function buildApprovalWhatsApp(name: string, code: string, whatsapp: string): st
   const apiDomain = process.env.PUBLIC_DOMAIN ?? "localhost:8080";
   const link = `https://${apiDomain}/api/ref/${code}`;
   const msg = `Hello ${name}, your affiliate application for DOT FEARLESS WEEK 2.0 has been approved. Your unique tracking link is: ${link}. You can log in to your dashboard to track your performance at: ${APP_URL}/auth. We look forward to a successful partnership. - The DOT Team`;
-  const number = whatsapp.replace(/[^0-9]/g, "");
+  const number = formatWhatsAppNumber(whatsapp);
   return `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
 }
 
 function buildSuspensionWhatsApp(name: string, whatsapp: string): string {
   const msg = `Hello ${name}, this is to inform you that your DOT FEARLESS WEEK 2.0 affiliate account has been temporarily suspended. If you have any questions or require further information, please reply to this message. - The DOT Team`;
-  const number = whatsapp.replace(/[^0-9]/g, "");
+  const number = formatWhatsAppNumber(whatsapp);
   return `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
 }
 
@@ -42,7 +43,7 @@ function buildReactivationWhatsApp(name: string, code: string, whatsapp: string)
   const apiDomain = process.env.PUBLIC_DOMAIN ?? "localhost:8080";
   const link = `https://${apiDomain}/api/ref/${code}`;
   const msg = `Hello ${name}, your DOT FEARLESS WEEK 2.0 affiliate account has been successfully reactivated. Your tracking link remains: ${link}. You can resume tracking your referrals at: ${APP_URL}/auth. - The DOT Team`;
-  const number = whatsapp.replace(/[^0-9]/g, "");
+  const number = formatWhatsAppNumber(whatsapp);
   return `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
 }
 
@@ -87,10 +88,14 @@ router.post("/admin/test/conversion", requireAdmin, async (req, res): Promise<vo
 /* ─── Stats ──────────────────────────────────────────────────── */
 
 router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
-  // Prune activity logs older than 48 hours to save space
+  // Prune activity and notifications older than 48 hours to save space
   const fortyEightHoursAgo = new Date();
   fortyEightHoursAgo.setHours(fortyEightHoursAgo.getHours() - 48);
-  await db.delete(activityTable).where(lt(activityTable.createdAt, fortyEightHoursAgo));
+  
+  await Promise.all([
+    db.delete(activityTable).where(lt(activityTable.createdAt, fortyEightHoursAgo)),
+    db.delete(notificationsTable).where(and(eq(notificationsTable.isRead, true), lt(notificationsTable.createdAt, fortyEightHoursAgo)))
+  ]);
 
   const [totals] = await db.select({ total: count() }).from(affiliatesTable);
   const [active] = await db.select({ cnt: count() }).from(affiliatesTable).where(eq(affiliatesTable.status, "active"));

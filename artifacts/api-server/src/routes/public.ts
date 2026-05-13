@@ -236,18 +236,11 @@ router.get("/checkout/v1/payment-confirmed-3561B2", async (req, res): Promise<vo
         // Record activity log
         await db.insert(activityTable).values({
           type: "conversion",
-          description: `Paid referral recorded via Sellenda`,
+          description: `Sale recorded via ${affiliate.primaryPlatform}`,
           affiliateId: affiliate.id,
           affiliateName: affiliate.name,
         });
 
-        // Notify Admin of the new sale (Non-blocking)
-        sendEmail({
-          to: process.env.ADMIN_NOTIFY_EMAIL || "dotacademy.ai@gmail.com",
-          subject: "💰 New Sale Recorded! - DOT Affiliates",
-          text: `Great news! A new sale has been recorded.\n\nAffiliate: ${affiliate.name} (${affiliate.email})\nPlatform: ${affiliate.primaryPlatform}\n\nView the leaderboard here: ${process.env.APP_URL}`,
-        }).catch((err: any) => console.error("Sale notification email error:", err));
-        
         success = true;
       } else {
         errorMsg = "Affiliate not found for this transaction.";
